@@ -24,6 +24,41 @@ class InputMode(StrEnum):
     ADDRESSES = "addresses"
 
 
+class OutputFormat(StrEnum):
+    """Supported report output formats."""
+
+    TXT = "txt"
+    JSON = "json"
+    CSV = "csv"
+
+
+class StdinFormat(StrEnum):
+    """Supported stdin payload formats."""
+
+    JSON = "json"
+    TOML = "toml"
+    ADDRESSES = "addresses"
+
+
+class Reliability(StrEnum):
+    """Coarse provider reliability classification."""
+
+    PUBLIC_BEST_EFFORT = "public-best-effort"
+    PUBLIC_DOCUMENTED = "public-documented"
+    KEYED_DOCUMENTED = "keyed-documented"
+    PAID_PRODUCTION = "paid-production"
+
+
+@dataclass(frozen=True)
+class DerivedAddress:
+    """A derived address plus its branch/index context."""
+
+    branch: int
+    index: int
+    path_label: str
+    address: str
+
+
 @dataclass(frozen=True)
 class ScanTarget:
     """One chain-specific public input to scan."""
@@ -31,6 +66,10 @@ class ScanTarget:
     chain: ChainSymbol
     mode: InputMode
     value: str
+    count: int | None = None
+    branches: tuple[int, ...] = (0,)
+    provider_order: tuple[str, ...] = ()
+    label: str | None = None
 
 
 @dataclass(frozen=True)
@@ -41,6 +80,7 @@ class ScanRequest:
     max_count: int
     targets: tuple[ScanTarget, ...]
     output_dir: Path = Path("output")
+    formats: tuple[OutputFormat, ...] = (OutputFormat.TXT, OutputFormat.JSON)
 
 
 @dataclass(frozen=True)
@@ -53,6 +93,7 @@ class ReportRow:
     balance_native: Decimal
     balance_usd: Decimal | None = None
     notes: tuple[str, ...] = ()
+    provider_id: str | None = None
 
     @property
     def is_active(self) -> bool:
@@ -78,6 +119,7 @@ class ChainRunResult:
     rows: tuple[ReportRow, ...]
     summary: ScanSummary | None = None
     error: str | None = None
+    providers_tried: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -85,4 +127,22 @@ class RunResult:
     """Result for a full project run."""
 
     output_dir: Path
+    formats: tuple[OutputFormat, ...] = (OutputFormat.TXT, OutputFormat.JSON)
     chains: dict[ChainSymbol, ChainRunResult] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class ProviderMetadata:
+    """Descriptive metadata for one address-activity backend."""
+
+    provider_id: str
+    display_name: str
+    supported_chains: tuple[ChainSymbol, ...]
+    requires_api_key: bool
+    signup_required: bool
+    free_tier: bool
+    multichain: bool
+    reliability: Reliability
+    docs_url: str
+    rate_limits: str
+    notes: str

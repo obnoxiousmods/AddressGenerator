@@ -59,6 +59,16 @@ def test_derive_eth_addresses(address_deriver: AddressDeriver) -> None:
     ]
 
 
+def test_derive_entries_include_branch_labels(address_deriver: AddressDeriver) -> None:
+    zpub = (
+        "zpub6rFR7y4Q2AijBEqTUquhVz398htDFrtymD9xYYfG1m4wAcvPhXNfE3EfH1r1"
+        "ADqtfSdVCToUG868RvUUkgDKf31mGDtKsAYz2oz2AGutZYs"
+    )
+    entries = address_deriver.derive_entries(ChainSymbol.BTC, zpub, (0, 1), 1)
+    assert entries[0].path_label == "0/0"
+    assert entries[1].path_label == "1/0"
+
+
 def test_ensure_positive_count_rejects_zero() -> None:
     with pytest.raises(ConfigurationError):
         ensure_positive_count(0)

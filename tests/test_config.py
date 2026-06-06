@@ -6,7 +6,7 @@ import pytest
 
 from address_generator.config import load_scan_request
 from address_generator.exceptions import ConfigurationError
-from address_generator.models import ChainSymbol, InputMode
+from address_generator.models import ChainSymbol, InputMode, OutputFormat
 
 
 def test_load_scan_request(tmp_path: Path) -> None:
@@ -38,3 +38,25 @@ def test_load_scan_request_rejects_missing_keys(tmp_path: Path) -> None:
 
     with pytest.raises(ConfigurationError):
         load_scan_request(config_path)
+
+
+def test_load_scan_request_parses_defaults_and_formats(tmp_path: Path) -> None:
+    config_path = tmp_path / "scan.toml"
+    config_path.write_text(
+        """
+label = "demo"
+formats = ["txt", "csv"]
+
+[defaults]
+branches = [0, 1]
+
+[[targets]]
+chain = "doge"
+mode = "addresses"
+value = "Dabc"
+""",
+        encoding="utf-8",
+    )
+    request = load_scan_request(config_path)
+    assert request.formats == (OutputFormat.TXT, OutputFormat.CSV)
+    assert request.targets[0].branches == (0, 1)

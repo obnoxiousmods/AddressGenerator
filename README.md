@@ -7,22 +7,37 @@
 [![Typing](https://img.shields.io/badge/type_checked-ty-9b59b6.svg)](https://github.com/astral-sh/ty)
 [![uv](https://img.shields.io/badge/packaging-uv-6bdfdb.svg)](https://docs.astral.sh/uv/)
 
-`AddressGenerator` is a typed, public-key-only Python project for deriving addresses from public extended keys and producing explorer-backed activity reports. It intentionally refuses recovery seeds and passphrases.
+`AddressGenerator` is a typed, public-key-only Python project for deriving addresses
+from public extended keys and producing explorer-backed activity reports. It
+intentionally refuses recovery seeds and passphrases.
 
 ## Features
 
-- Interactive CLI and reusable Python API
+- Reusable Python API plus `scan`, `derive`, `providers`, `validate`, and `tui` commands
 - `BTC`, `LTC`, `DOGE`, and `ETH` support
 - ERC-20 holdings discovery on scanned Ethereum addresses
 - `xpub`-style derivation or pasted public address lists
-- Per-run `*_all.txt`, `*_active.txt`, and `summary.json` output
+- `stdin`, interactive prompts, CLI flags, and TOML config support
+- `txt`, `json`, and `csv` output formats per run
+- Lightweight Rich TUI with live per-chain progress
+- Provider routing with chain-specific fallbacks and keyed `DOGE` mainnet support
 - `uv`, `ruff`, `ty`, `pytest`, and coverage-first project setup
 
 ## Quick Start
 
 ```bash
 uv sync --extra dev
-uv run address-generator
+uv run address-generator scan --config examples/basic-scan.toml
+```
+
+## Command Surface
+
+```bash
+uv run address-generator scan --config examples/basic-scan.toml
+uv run address-generator derive --chain BTC --xpub <XPUB> --count 10 --branches 0,1
+uv run address-generator providers --csv
+uv run address-generator validate --chain ETH --mode addresses --value "0xabc,0xdef"
+uv run address-generator tui --config examples/basic-scan.toml
 ```
 
 ## Example Config
@@ -30,10 +45,15 @@ uv run address-generator
 ```toml
 label = "sample-run"
 max_count = 5
+formats = ["txt", "json", "csv"]
+
+[defaults]
+branches = [0, 1]
 
 [[targets]]
 chain = "BTC"
 mode = "xpub"
+providers = ["blockstream-public", "sochain"]
 value = "zpub6rFR7y4Q2AijBEqTUquhVz398htDFrtymD9xYYfG1m4wAcvPhXNfE3EfH1r1ADqtfSdVCToUG868RvUUkgDKf31mGDtKsAYz2oz2AGutZYs"
 
 [[targets]]
@@ -45,7 +65,7 @@ value = "0xde0B295669a9FD93d5F28D9Ec85E40f4cb697BAe"
 Run it:
 
 ```bash
-uv run address-generator --config examples/basic-scan.toml
+uv run address-generator scan --config examples/basic-scan.toml
 ```
 
 ## Output
@@ -54,12 +74,42 @@ Each scan writes to `output/<label>/`:
 
 - `<CHAIN>_all.txt`
 - `<CHAIN>_active.txt`
+- `<CHAIN>_all.json`
+- `<CHAIN>_active.json`
+- `<CHAIN>_all.csv`
+- `<CHAIN>_active.csv`
 - `summary.json`
 
 Example line:
 
 ```text
 index=0 | address=bc1q... | txs=4 | balance=0.01500000 BTC | usd=$905.70
+```
+
+## Providers
+
+The default provider catalog is intentionally mixed because there is no single
+free, official, multichain backend that cleanly covers `BTC`, `LTC`, `DOGE`,
+and `ETH`.
+
+| Provider | Chains | Signup | Free | Notes |
+| --- | --- | --- | --- | --- |
+| `blockstream-public` | `BTC` | No | Yes | Good Bitcoin public explorer for prototyping. Official docs do not publish a simple numeric public rate limit. |
+| `litecoinspace-public` | `LTC` | No | Yes | Litecoin Foundation-run public explorer API. Official docs do not publish a numeric REST rate limit. |
+| `sochain` | `BTC`, `LTC`, `DOGE` | Yes | Keyed | Used here for real `DOGE` mainnet support. Requires `SOCHAIN_API_KEY`. |
+| `ethplorer` | `ETH` | No | Yes | `freekey` supports `5 req/s`, `50/min`, `200/hour`, `2000/day`, `3000/week`. |
+
+Use `uv run address-generator providers` to inspect the current provider metadata
+from the installed package.
+
+## Stdin
+
+`scan` can build requests from stdin:
+
+```bash
+cat examples/basic-scan.toml | uv run address-generator scan --stdin --stdin-format toml
+printf '0xde0B295669a9FD93d5F28D9Ec85E40f4cb697BAe\n' | \
+  uv run address-generator scan --stdin --stdin-format addresses --chain ETH --mode addresses
 ```
 
 ## Why No Seed Input?

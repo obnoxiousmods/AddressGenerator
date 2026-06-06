@@ -2,8 +2,17 @@ from __future__ import annotations
 
 from decimal import Decimal
 
-from address_generator.clients import SupportsEthereumScan, SupportsPriceLookup, SupportsUtxoScan
-from address_generator.derivation import AddressDeriver, AddressInputLoader, ExtendedKeyNormalizer
+from address_generator.clients import (
+    ProviderCatalog,
+    ProviderRouter,
+    SupportsAddressActivityProvider,
+    SupportsPriceLookup,
+)
+from address_generator.derivation import (
+    AddressDeriver,
+    AddressInputLoader,
+    ExtendedKeyNormalizer,
+)
 from address_generator.models import ChainSymbol, InputMode, ReportRow, ScanTarget
 from address_generator.services import PortfolioScanService
 
@@ -35,26 +44,27 @@ def test_scan_service_builds_xpub_addresses() -> None:
         def fetch_prices(self, chains: tuple[ChainSymbol, ...]) -> dict[ChainSymbol, Decimal]:
             return {}
 
-    class NoopUtxo(SupportsUtxoScan):
+    class NoopProvider(SupportsAddressActivityProvider):
+        provider_id = "noop"
+
+        def supports_chain(self, chain: ChainSymbol) -> bool:
+            return True
+
         def scan_address(
             self,
             chain: ChainSymbol,
-            index: int,
+            index: int | str,
             address: str,
             usd_price: Decimal | None,
         ) -> ReportRow:
-            return ReportRow(index=index, address=address, tx_count=0, balance_native=Decimal("0"))
-
-    class NoopEth(SupportsEthereumScan):
-        def scan_address(self, index: int, address: str) -> ReportRow:
+            del chain, usd_price
             return ReportRow(index=index, address=address, tx_count=0, balance_native=Decimal("0"))
 
     service = PortfolioScanService(
         address_deriver=AddressDeriver(ExtendedKeyNormalizer()),
         address_input_loader=AddressInputLoader(),
         price_client=NoPriceClient(),
-        utxo_explorer_client=NoopUtxo(),
-        ethereum_explorer_client=NoopEth(),
+        provider_router=ProviderRouter(ProviderCatalog(providers={"noop": NoopProvider()})),
     )
     target = ScanTarget(
         chain=ChainSymbol.BTC,
@@ -63,6 +73,8 @@ def test_scan_service_builds_xpub_addresses() -> None:
             "zpub6rFR7y4Q2AijBEqTUquhVz398htDFrtymD9xYYfG1m4wAcvPhXNfE3EfH1r1"
             "ADqtfSdVCToUG868RvUUkgDKf31mGDtKsAYz2oz2AGutZYs"
         ),
+        provider_order=("noop",),
     )
     rows = service.build_rows(target, 1)
     assert rows[0].address == "bc1qcr8te4kr609gcawutmrza0j4xv80jy8z306fyu"
+    assert rows[0].index == "0/0"

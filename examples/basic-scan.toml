@@ -1,9 +1,14 @@
 label = "basic-scan"
 max_count = 3
+formats = ["txt", "json", "csv"]
+
+[defaults]
+branches = [0]
 
 [[targets]]
 chain = "BTC"
 mode = "xpub"
+providers = ["blockstream-public", "sochain"]
 value = "zpub6rFR7y4Q2AijBEqTUquhVz398htDFrtymD9xYYfG1m4wAcvPhXNfE3EfH1r1ADqtfSdVCToUG868RvUUkgDKf31mGDtKsAYz2oz2AGutZYs"
 
 [[targets]]

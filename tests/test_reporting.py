@@ -4,7 +4,14 @@ import json
 from decimal import Decimal
 from pathlib import Path
 
-from address_generator.models import ChainRunResult, ChainSymbol, ReportRow, RunResult, ScanSummary
+from address_generator.models import (
+    ChainRunResult,
+    ChainSymbol,
+    OutputFormat,
+    ReportRow,
+    RunResult,
+    ScanSummary,
+)
 from address_generator.reporting import ReportWriter
 
 
@@ -17,6 +24,7 @@ def test_report_writer_writes_expected_files(tmp_path: Path) -> None:
     )
     result = RunResult(
         output_dir=output_dir,
+        formats=(OutputFormat.TXT, OutputFormat.JSON, OutputFormat.CSV),
         chains={
             ChainSymbol.BTC: ChainRunResult(
                 rows=rows,
@@ -34,6 +42,8 @@ def test_report_writer_writes_expected_files(tmp_path: Path) -> None:
 
     assert (output_dir / "BTC_all.txt").exists()
     assert (output_dir / "BTC_active.txt").exists()
+    assert (output_dir / "BTC_all.json").exists()
+    assert (output_dir / "BTC_all.csv").exists()
     summary = json.loads((output_dir / "summary.json").read_text(encoding="utf-8"))
     assert summary["chains"]["BTC"]["active_count"] == 1
 

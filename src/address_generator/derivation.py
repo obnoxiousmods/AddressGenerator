@@ -11,7 +11,7 @@ from eth_hash.auto import keccak
 
 from address_generator.constants import BTC, DOGE, ETH, LTC, SECP256K1_P
 from address_generator.exceptions import ConfigurationError
-from address_generator.models import ChainSymbol
+from address_generator.models import ChainSymbol, DerivedAddress
 
 CHAIN_MAP = {
     ChainSymbol.BTC: BTC,
@@ -75,26 +75,54 @@ class AddressDeriver:
     def derive(self, chain: ChainSymbol, public_key: str, max_count: int) -> list[str]:
         """Derive receive addresses for a supported chain."""
 
+        return [item.address for item in self.derive_entries(chain, public_key, (0,), max_count)]
+
+    def derive_entries(
+        self,
+        chain: ChainSymbol,
+        public_key: str,
+        branches: tuple[int, ...],
+        max_count: int,
+    ) -> list[DerivedAddress]:
+        """Derive receive addresses and include branch/index metadata."""
+
         normalized_key = self.normalizer.normalize(public_key.strip())
         hdkey = bip32.HDKey.from_string(normalized_key)
 
         if chain is ChainSymbol.ETH:
-            return [self._derive_eth_address(hdkey, index) for index in range(max_count)]
+            return [
+                DerivedAddress(
+                    branch=branch,
+                    index=index,
+                    path_label=f"{branch}/{index}",
+                    address=self._derive_eth_address(hdkey, branch, index),
+                )
+                for branch in branches
+                for index in range(max_count)
+            ]
 
         chain_definition = CHAIN_MAP[chain]
         mode = self._infer_script_mode(chain, public_key)
-        derived: list[str] = []
-        for index in range(max_count):
-            public_child_key = hdkey.derive([0, index]).key
-            if mode == "legacy":
-                address = script.p2pkh(public_child_key).address(chain_definition.network)
-            elif mode == "nested":
-                address = script.p2sh(script.p2wpkh(public_child_key).script()).address(
-                    chain_definition.network
+        derived: list[DerivedAddress] = []
+        for branch in branches:
+            for index in range(max_count):
+                public_child_key = hdkey.derive([branch, index]).key
+                if mode == "legacy":
+                    address = script.p2pkh(public_child_key).address(chain_definition.network)
+                elif mode == "nested":
+                    address = script.p2sh(script.p2wpkh(public_child_key).script()).address(
+                        chain_definition.network
+                    )
+                else:
+                    address = script.p2wpkh(public_child_key).address(chain_definition.network)
+                derived.append(
+                    DerivedAddress(
+                        branch=branch,
+                        index=index,
+                        path_label=f"{branch}/{index}",
+                        address=address,
+                    )
                 )
-            else:
-                address = script.p2wpkh(public_child_key).address(chain_definition.network)
-            derived.append(address)
         return derived
 
     def _infer_script_mode(self, chain: ChainSymbol, public_key: str) -> str:
@@ -110,10 +138,10 @@ class AddressDeriver:
             return "native"
         return chain_definition.default_mode
 
-    def _derive_eth_address(self, hdkey: bip32.HDKey, index: int) -> str:
+    def _derive_eth_address(self, hdkey: bip32.HDKey, branch: int, index: int) -> str:
         """Derive an EVM address from an uncompressed public key hash."""
 
-        compressed_sec = hdkey.derive([0, index]).key.sec()
+        compressed_sec = hdkey.derive([branch, index]).key.sec()
         prefix = compressed_sec[0]
         x_coordinate = int.from_bytes(compressed_sec[1:], "big")
         y_square = (pow(x_coordinate, 3, SECP256K1_P) + 7) % SECP256K1_P

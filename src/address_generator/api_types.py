@@ -66,3 +66,33 @@ class EthAddressResponseDict(TypedDict):
     countTxs: NotRequired[int]
     ETH: NotRequired[EthAddressBalanceDict]
     tokens: NotRequired[list[EthTokenBalanceDict]]
+
+
+class SoChainAmountDict(TypedDict, total=False):
+    """Balance payload fields returned by SoChain."""
+
+    confirmed: str
+    unconfirmed: str
+    total: str
+
+
+class SoChainTransactionCountsDict(TypedDict, total=False):
+    """Transaction count fields returned by SoChain."""
+
+    total: int
+    confirmed: int
+    unconfirmed: int
+
+
+class SoChainResponseDataDict(TypedDict, total=False):
+    """Generic SoChain v3 response payload."""
+
+    balance: SoChainAmountDict
+    transaction_counts: SoChainTransactionCountsDict
+
+
+class SoChainResponseDict(TypedDict):
+    """Top-level SoChain v3 response."""
+
+    status: str
+    data: SoChainResponseDataDict

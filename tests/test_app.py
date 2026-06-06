@@ -4,6 +4,12 @@ from decimal import Decimal
 from pathlib import Path
 
 from address_generator.app import AddressGeneratorApp
+from address_generator.clients import ProviderCatalog
+from address_generator.derivation import (
+    AddressDeriver,
+    AddressInputLoader,
+    ExtendedKeyNormalizer,
+)
 from address_generator.models import (
     ChainRunResult,
     ChainSymbol,
@@ -17,7 +23,14 @@ from address_generator.models import (
 
 
 class FakeScanService:
-    def build_rows(self, target: ScanTarget, max_count: int) -> tuple[ReportRow, ...]:
+    def build_rows(
+        self,
+        target: ScanTarget,
+        max_count: int,
+        *,
+        progress: object | None = None,
+    ) -> tuple[ReportRow, ...]:
+        del progress
         assert max_count == 2
         if target.chain is ChainSymbol.BTC:
             return (
@@ -52,7 +65,13 @@ class FakeReportWriter:
 
 def test_app_collects_success_and_failure() -> None:
     writer = FakeReportWriter()
-    app = AddressGeneratorApp(scan_service=FakeScanService(), report_writer=writer)  # type: ignore[arg-type]
+    app = AddressGeneratorApp(
+        scan_service=FakeScanService(),
+        report_writer=writer,
+        provider_catalog=ProviderCatalog(providers={}),
+        address_deriver=AddressDeriver(ExtendedKeyNormalizer()),
+        address_input_loader=AddressInputLoader(),
+    )
     request = ScanRequest(
         label="demo",
         max_count=2,
