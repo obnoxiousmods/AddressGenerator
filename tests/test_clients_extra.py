@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any, cast
 
 import pytest
+import requests
 from conftest import FakeHttpClient
 
 from address_generator.clients import (
@@ -19,19 +20,24 @@ from address_generator.models import ChainSymbol, ReportRow
 
 
 class FakeResponse:
-    def __init__(self, payload: object) -> None:
+    def __init__(self, payload: object, status_code: int = 200) -> None:
         self.payload = payload
+        self.status_code = status_code
 
     def raise_for_status(self) -> None:
-        return None
+        if self.status_code >= 400:
+            response = requests.Response()
+            response.status_code = self.status_code
+            raise requests.HTTPError(response=response)
 
     def json(self) -> object:
         return self.payload
 
 
 class FakeSession:
-    def __init__(self, payload: object) -> None:
+    def __init__(self, payload: object, status_code: int = 200) -> None:
         self.payload = payload
+        self.status_code = status_code
         self.calls = 0
 
     def get(
@@ -43,7 +49,25 @@ class FakeSession:
     ) -> FakeResponse:
         del url, params, timeout, headers
         self.calls += 1
-        return FakeResponse(self.payload)
+        return FakeResponse(self.payload, status_code=self.status_code)
+
+
+class FlakySession:
+    def __init__(self) -> None:
+        self.calls = 0
+
+    def get(
+        self,
+        url: str,
+        params: dict[str, str] | None = None,
+        timeout: int = 0,
+        headers: dict[str, str] | None = None,
+    ) -> FakeResponse:
+        del url, params, timeout, headers
+        self.calls += 1
+        if self.calls == 1:
+            return FakeResponse({"error": "rate limit"}, status_code=429)
+        return FakeResponse({"ok": True})
 
 
 def test_json_http_client_uses_cache(tmp_path: Path) -> None:
@@ -54,6 +78,30 @@ def test_json_http_client_uses_cache(tmp_path: Path) -> None:
     assert first == {"ok": True}
     assert second == {"ok": True}
     assert session.calls == 1
+
+
+def test_json_http_client_retries_rate_limit(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    sleeps: list[float] = []
+
+    def fake_sleep(seconds: float) -> None:
+        sleeps.append(seconds)
+
+    monkeypatch.setattr("address_generator.clients.time.sleep", fake_sleep)
+    session = FlakySession()
+    client = JsonHttpClient(
+        session=cast(Any, session),
+        cache_dir=tmp_path,
+        cache_ttl_seconds=0,
+        retry_attempts=2,
+        retry_backoff_seconds=0.25,
+    )
+    payload = client.get_json("https://example.com/data")
+    assert payload == {"ok": True}
+    assert session.calls == 2
+    assert sleeps == [0.25]
 
 
 def test_price_client_returns_empty_for_unknown_input(fake_http_client: FakeHttpClient) -> None:

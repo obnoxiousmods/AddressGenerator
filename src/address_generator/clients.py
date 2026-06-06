@@ -89,6 +89,8 @@ class JsonHttpClient:
     timeout_seconds: int = 30
     cache_dir: Path = Path(".cache/address_generator/http")
     cache_ttl_seconds: int = 300
+    retry_attempts: int = 3
+    retry_backoff_seconds: float = 1.5
 
     def get_json(
         self,
@@ -104,19 +106,31 @@ class JsonHttpClient:
         if cached is not None:
             return cached
 
-        response = self.session.get(
-            url,
-            params=params,
-            timeout=self.timeout_seconds,
-            headers={
-                "User-Agent": "AddressGenerator/0.3",
-                **(headers or {}),
-            },
-        )
-        response.raise_for_status()
-        payload = response.json()
-        self._write_cache(cache_path, payload)
-        return payload
+        attempts = max(self.retry_attempts, 1)
+        for attempt in range(1, attempts + 1):
+            response = self.session.get(
+                url,
+                params=params,
+                timeout=self.timeout_seconds,
+                headers={
+                    "User-Agent": "AddressGenerator/0.3",
+                    **(headers or {}),
+                },
+            )
+            try:
+                response.raise_for_status()
+            except requests.HTTPError:
+                if not self._should_retry(response.status_code, attempt, attempts):
+                    raise
+                time.sleep(self.retry_backoff_seconds * attempt)
+                continue
+
+            payload = response.json()
+            self._write_cache(cache_path, payload)
+            return payload
+
+        msg = f"Failed to fetch JSON from {url}"
+        raise ExplorerApiError(msg)
 
     def _cache_path(
         self,
@@ -146,6 +160,13 @@ class JsonHttpClient:
     def _write_cache(self, path: Path, payload: Any) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps(payload), encoding="utf-8")
+
+    def _should_retry(self, status_code: int, attempt: int, max_attempts: int) -> bool:
+        """Return whether a response code should be retried."""
+
+        if attempt >= max_attempts:
+            return False
+        return status_code == 429 or 500 <= status_code < 600
 
 
 @dataclass
