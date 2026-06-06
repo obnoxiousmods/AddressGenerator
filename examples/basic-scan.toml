@@ -1,0 +1,12 @@
+label = "basic-scan"
+max_count = 3
+
+[[targets]]
+chain = "BTC"
+mode = "xpub"
+value = "zpub6rFR7y4Q2AijBEqTUquhVz398htDFrtymD9xYYfG1m4wAcvPhXNfE3EfH1r1ADqtfSdVCToUG868RvUUkgDKf31mGDtKsAYz2oz2AGutZYs"
+
+[[targets]]
+chain = "ETH"
+mode = "addresses"
+value = "0xde0B295669a9FD93d5F28D9Ec85E40f4cb697BAe"

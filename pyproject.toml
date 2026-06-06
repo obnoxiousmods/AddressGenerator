@@ -1,0 +1,89 @@
+[project]
+name = "address-generator"
+version = "0.2.0"
+description = "Public-key-only cryptocurrency address derivation and portfolio reporting."
+readme = "README.md"
+requires-python = ">=3.12"
+license = "MIT"
+authors = [
+  { name = "Joey" }
+]
+keywords = ["bitcoin", "ethereum", "wallet", "xpub", "portfolio", "crypto"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Topic :: Office/Business :: Financial",
+  "Topic :: Security :: Cryptography",
+  "Typing :: Typed",
+]
+dependencies = [
+  "eth-hash[pycryptodome]>=0.8.0",
+  "embit>=0.8.0",
+  "requests>=2.34.0",
+  "rich>=15.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.4.0",
+  "pytest-cov>=6.0.0",
+  "ruff>=0.15.8",
+  "ty>=0.0.44",
+]
+
+[project.scripts]
+address-generator = "address_generator.cli:main"
+
+[build-system]
+requires = ["hatchling>=1.27.0"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/address_generator"]
+
+[tool.uv]
+package = true
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.format]
+docstring-code-format = true
+
+[tool.ruff.lint]
+select = [
+  "B",
+  "C4",
+  "E",
+  "F",
+  "FA",
+  "I",
+  "N",
+  "PL",
+  "PTH",
+  "RUF",
+  "SIM",
+  "UP",
+  "W",
+]
+ignore = [
+  "PLR0913",
+  "PLR2004",
+]
+
+[tool.pytest.ini_options]
+addopts = "--cov=address_generator --cov-report=term-missing --cov-report=xml --cov-fail-under=92"
+testpaths = ["tests"]
+
+[tool.coverage.report]
+skip_covered = true
+show_missing = true
+
+[tool.ty.src]
+include = ["src", "tests"]
