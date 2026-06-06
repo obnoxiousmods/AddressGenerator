@@ -1,6 +1,6 @@
 [project]
 name = "address-generator"
-version = "0.2.0"
+version = "0.4.0"
 description = "Public-key-only cryptocurrency address derivation and portfolio reporting."
 readme = "README.md"
 requires-python = ">=3.12"

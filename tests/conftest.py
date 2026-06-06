@@ -5,12 +5,15 @@ from decimal import Decimal
 import pytest
 
 from address_generator.clients import (
+    BlockscoutAddressProvider,
+    BscScanAddressProvider,
     EsploraAddressProvider,
     EthplorerAddressProvider,
     PriceClient,
     ProviderCatalog,
     ProviderRouter,
     SoChainAddressProvider,
+    ZcashInfoAddressProvider,
 )
 from address_generator.derivation import AddressDeriver, AddressInputLoader, ExtendedKeyNormalizer
 from address_generator.models import ChainSymbol
@@ -63,6 +66,11 @@ def fake_http_client() -> FakeHttpClient:
         {
             (
                 "https://api.coingecko.com/api/v3/simple/price",
+                (("ids", "bitcoin-cash"), ("vs_currencies", "usd")),
+                None,
+            ): {"bitcoin-cash": {"usd": 450.0}},
+            (
+                "https://api.coingecko.com/api/v3/simple/price",
                 (("ids", "bitcoin"), ("vs_currencies", "usd")),
                 None,
             ): {"bitcoin": {"usd": 60000.0}},
@@ -77,6 +85,21 @@ def fake_http_client() -> FakeHttpClient:
                 None,
             ): {"dogecoin": {"usd": 0.1}},
             (
+                "https://api.coingecko.com/api/v3/simple/price",
+                (("ids", "ethereum-classic"), ("vs_currencies", "usd")),
+                None,
+            ): {"ethereum-classic": {"usd": 25.0}},
+            (
+                "https://api.coingecko.com/api/v3/simple/price",
+                (("ids", "matic-network"), ("vs_currencies", "usd")),
+                None,
+            ): {"matic-network": {"usd": 0.75}},
+            (
+                "https://api.coingecko.com/api/v3/simple/price",
+                (("ids", "zcash"), ("vs_currencies", "usd")),
+                None,
+            ): {"zcash": {"usd": 30.0}},
+            (
                 "https://blockstream.info/api/address/bc1qexample",
                 None,
                 None,
@@ -88,6 +111,27 @@ def fake_http_client() -> FakeHttpClient:
                     "spent_txo_count": 0,
                     "spent_txo_sum": 0,
                     "tx_count": 1,
+                },
+                "mempool_stats": {
+                    "funded_txo_count": 0,
+                    "funded_txo_sum": 0,
+                    "spent_txo_count": 0,
+                    "spent_txo_sum": 0,
+                    "tx_count": 0,
+                },
+            },
+            (
+                "https://bchexplorer.cash/api/address/1BCHexample",
+                None,
+                None,
+            ): {
+                "address": "bitcoincash:qexample",
+                "chain_stats": {
+                    "funded_txo_count": 2,
+                    "funded_txo_sum": 500000000,
+                    "spent_txo_count": 0,
+                    "spent_txo_sum": 0,
+                    "tx_count": 2,
                 },
                 "mempool_stats": {
                     "funded_txo_count": 0,
@@ -135,6 +179,81 @@ def fake_http_client() -> FakeHttpClient:
                 "status": "success",
                 "data": {"transaction_counts": {"total": 4}},
             },
+            (
+                "https://api.zcashinfo.com/api/v1/addresses/t1abc",
+                None,
+                None,
+            ): {
+                "address": "t1abc",
+                "address_type": "p2pkh",
+                "network": "mainnet",
+                "balance_zatoshis": 123000000,
+                "balance_zec": "1.23000000",
+                "received_zatoshis": 123000000,
+                "received_zec": "1.23000000",
+                "utxo_count": 1,
+            },
+            (
+                "https://api.zcashinfo.com/api/v1/addresses/t1abc/txs",
+                None,
+                None,
+            ): {
+                "address": "t1abc",
+                "total_count": 3,
+                "start_height": 1,
+                "end_height": 1,
+                "transactions": [],
+            },
+            (
+                "https://etc.blockscout.com/api/v2/addresses/0xetc",
+                None,
+                None,
+            ): {
+                "hash": "0xetc",
+                "coin_balance": "2000000000000000000",
+                "exchange_rate": "25.0",
+            },
+            (
+                "https://etc.blockscout.com/api/v2/addresses/0xetc/counters",
+                None,
+                None,
+            ): {
+                "transactions_count": "7",
+            },
+            (
+                "https://api.bscscan.com/api",
+                (
+                    ("action", "balance"),
+                    ("address", "0xbsc"),
+                    ("apikey", "bsc-key"),
+                    ("module", "account"),
+                    ("tag", "latest"),
+                ),
+                None,
+            ): {
+                "status": "1",
+                "message": "OK",
+                "result": "3000000000000000000",
+            },
+            (
+                "https://api.bscscan.com/api",
+                (
+                    ("action", "txlist"),
+                    ("address", "0xbsc"),
+                    ("apikey", "bsc-key"),
+                    ("endblock", "99999999"),
+                    ("module", "account"),
+                    ("offset", "10000"),
+                    ("page", "1"),
+                    ("sort", "asc"),
+                    ("startblock", "0"),
+                ),
+                None,
+            ): {
+                "status": "1",
+                "message": "OK",
+                "result": [{}, {}],
+            },
         }
     )
 
@@ -149,8 +268,22 @@ def provider_catalog(fake_http_client: FakeHttpClient) -> ProviderCatalog:
                 supported_chains=(ChainSymbol.BTC,),
                 http_client=fake_http_client,
             ),
+            "bch-explorer-public": EsploraAddressProvider(
+                provider_id="bch-explorer-public",
+                api_base="https://bchexplorer.cash/api",
+                supported_chains=(ChainSymbol.BCH,),
+                http_client=fake_http_client,
+            ),
             "ethplorer": EthplorerAddressProvider(http_client=fake_http_client),
             "sochain": SoChainAddressProvider(http_client=fake_http_client, api_key="test-key"),
+            "zcashinfo-public": ZcashInfoAddressProvider(http_client=fake_http_client),
+            "etc-blockscout": BlockscoutAddressProvider(
+                provider_id="etc-blockscout",
+                api_base="https://etc.blockscout.com/api/v2",
+                supported_chains=(ChainSymbol.ETC,),
+                http_client=fake_http_client,
+            ),
+            "bscscan": BscScanAddressProvider(http_client=fake_http_client, api_key="bsc-key"),
         }
     )
 

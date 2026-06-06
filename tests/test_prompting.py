@@ -27,7 +27,22 @@ def test_prompt_builder_collects_request(monkeypatch: pytest.MonkeyPatch) -> Non
             "",
         ]
     )
-    confirm_values = iter([True, False, False, True])
+    confirm_values = iter(
+        [
+            True,
+            False,
+            False,
+            False,
+            False,
+            True,
+            False,
+            False,
+            False,
+            False,
+            False,
+            False,
+        ]
+    )
 
     monkeypatch.setattr(Prompt, "ask", lambda *args, **kwargs: next(prompt_values))
     int_values = iter([2, 0, 0])

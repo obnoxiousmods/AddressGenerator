@@ -72,14 +72,19 @@ count = 10
 ## Provider Notes
 
 - `BTC` defaults to `blockstream-public`, then `sochain`
+- `BCH` defaults to `bch-explorer-public`
 - `LTC` defaults to `litecoinspace-public`, then `sochain`
 - `DOGE` uses `sochain` for real mainnet support
+- `ZEC` uses `zcashinfo-public` for transparent addresses
 - `ETH` uses `ethplorer` and includes ERC-20 token notes when present
+- `ETC`, `POL`, `ARB`, `BASE`, and `OP` use public `Blockscout` instances
+- `BSC` uses keyed `BscScan`
 
 If a keyed provider is configured, set the expected environment variable first:
 
 ```bash
 export SOCHAIN_API_KEY=your_key_here
+export BSCSCAN_API_KEY=your_key_here
 ```
 
 ## Output Semantics

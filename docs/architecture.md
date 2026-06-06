@@ -27,6 +27,11 @@ That design lets the package mix:
 - keyed providers where mainnet coverage requires them
 - test doubles for deterministic CI
 
+The currently implemented chain families are:
+
+- UTXO: `BTC`, `BCH`, `LTC`, `DOGE`, `ZEC`
+- EVM mainnet/L2 family: `ETH`, `ETC`, `POL`, `BSC`, `ARB`, `BASE`, `OP`
+
 ## Execution Flow
 
 1. The CLI or TUI builds a `ScanRequest`.

@@ -96,3 +96,54 @@ class SoChainResponseDict(TypedDict):
 
     status: str
     data: SoChainResponseDataDict
+
+
+class BlockscoutAddressResponseDict(TypedDict, total=False):
+    """Address payload returned by Blockscout v2."""
+
+    hash: str
+    coin_balance: str
+    exchange_rate: str
+    has_token_transfers: bool
+    has_tokens: bool
+
+
+class BlockscoutCountersResponseDict(TypedDict, total=False):
+    """Counter payload returned by Blockscout v2."""
+
+    transactions_count: str
+    token_transfers_count: str
+    validations_count: str
+    logs_count: str
+    token_balances_count: str
+
+
+class ZcashInfoAddressResponseDict(TypedDict):
+    """Transparent-address payload returned by zcashinfo."""
+
+    address: str
+    address_type: str
+    network: str
+    balance_zatoshis: int
+    balance_zec: str
+    received_zatoshis: int
+    received_zec: str
+    utxo_count: int
+
+
+class ZcashInfoTransactionsResponseDict(TypedDict):
+    """Transactions payload returned by zcashinfo."""
+
+    address: str
+    total_count: int
+    start_height: int
+    end_height: int
+    transactions: list[dict[str, object]]
+
+
+class EtherscanStatusResponseDict(TypedDict):
+    """Minimal Etherscan/BscScan status envelope."""
+
+    status: str
+    message: str
+    result: str | list[dict[str, object]]

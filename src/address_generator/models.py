@@ -12,9 +12,17 @@ class ChainSymbol(StrEnum):
     """Supported chain identifiers."""
 
     BTC = "BTC"
+    BCH = "BCH"
     LTC = "LTC"
     DOGE = "DOGE"
+    ZEC = "ZEC"
     ETH = "ETH"
+    ETC = "ETC"
+    POL = "POL"
+    BSC = "BSC"
+    ARB = "ARB"
+    BASE = "BASE"
+    OP = "OP"
 
 
 class InputMode(StrEnum):

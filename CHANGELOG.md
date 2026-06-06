@@ -10,6 +10,13 @@
 - Added live TUI progress rendering.
 - Expanded tests to cover CLI dispatch, provider routing, stdin parsing, app helpers, and TUI behavior.
 
+## 0.4.0
+
+- Added `BCH`, `ZEC`, `ETC`, `POL`, `BSC`, `ARB`, `BASE`, and `OP`.
+- Added public `BCH` explorer support and documented public `ZEC` support.
+- Added public `Blockscout` providers for `ETC`, `Polygon`, `Arbitrum`, `Base`, and `Optimism`.
+- Added keyed `BscScan` support for `BSC`.
+
 ## 0.2.0
 
 - Refactored the project into a typed `src/` layout.

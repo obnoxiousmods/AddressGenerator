@@ -8,6 +8,8 @@ from pathlib import Path
 from typing import Protocol
 
 from address_generator.clients import (
+    BlockscoutAddressProvider,
+    BscScanAddressProvider,
     EsploraAddressProvider,
     EthplorerAddressProvider,
     JsonHttpClient,
@@ -15,6 +17,7 @@ from address_generator.clients import (
     ProviderCatalog,
     ProviderRouter,
     SoChainAddressProvider,
+    ZcashInfoAddressProvider,
 )
 from address_generator.derivation import (
     AddressDeriver,
@@ -86,6 +89,12 @@ class AddressGeneratorApp:
                     supported_chains=(ChainSymbol.BTC,),
                     http_client=http_client,
                 ),
+                "bch-explorer-public": EsploraAddressProvider(
+                    provider_id="bch-explorer-public",
+                    api_base="https://bchexplorer.cash/api",
+                    supported_chains=(ChainSymbol.BCH,),
+                    http_client=http_client,
+                ),
                 "litecoinspace-public": EsploraAddressProvider(
                     provider_id="litecoinspace-public",
                     api_base="https://litecoinspace.org/api",
@@ -93,7 +102,39 @@ class AddressGeneratorApp:
                     http_client=http_client,
                 ),
                 "sochain": SoChainAddressProvider(http_client=http_client),
+                "zcashinfo-public": ZcashInfoAddressProvider(http_client=http_client),
                 "ethplorer": EthplorerAddressProvider(http_client=http_client),
+                "etc-blockscout": BlockscoutAddressProvider(
+                    provider_id="etc-blockscout",
+                    api_base="https://etc.blockscout.com/api/v2",
+                    supported_chains=(ChainSymbol.ETC,),
+                    http_client=http_client,
+                ),
+                "polygon-blockscout": BlockscoutAddressProvider(
+                    provider_id="polygon-blockscout",
+                    api_base="https://polygon.blockscout.com/api/v2",
+                    supported_chains=(ChainSymbol.POL,),
+                    http_client=http_client,
+                ),
+                "arbitrum-blockscout": BlockscoutAddressProvider(
+                    provider_id="arbitrum-blockscout",
+                    api_base="https://arbitrum.blockscout.com/api/v2",
+                    supported_chains=(ChainSymbol.ARB,),
+                    http_client=http_client,
+                ),
+                "base-blockscout": BlockscoutAddressProvider(
+                    provider_id="base-blockscout",
+                    api_base="https://base.blockscout.com/api/v2",
+                    supported_chains=(ChainSymbol.BASE,),
+                    http_client=http_client,
+                ),
+                "optimism-blockscout": BlockscoutAddressProvider(
+                    provider_id="optimism-blockscout",
+                    api_base="https://optimism.blockscout.com/api/v2",
+                    supported_chains=(ChainSymbol.OP,),
+                    http_client=http_client,
+                ),
+                "bscscan": BscScanAddressProvider(http_client=http_client),
             }
         )
         scan_service = PortfolioScanService(

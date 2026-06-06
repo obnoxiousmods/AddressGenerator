@@ -69,6 +69,34 @@ def test_derive_entries_include_branch_labels(address_deriver: AddressDeriver) -
     assert entries[1].path_label == "1/0"
 
 
+def test_derive_bch_legacy_address_prefix(address_deriver: AddressDeriver) -> None:
+    zpub = (
+        "zpub6rFR7y4Q2AijBEqTUquhVz398htDFrtymD9xYYfG1m4wAcvPhXNfE3EfH1r1"
+        "ADqtfSdVCToUG868RvUUkgDKf31mGDtKsAYz2oz2AGutZYs"
+    )
+    address = address_deriver.derive(ChainSymbol.BCH, zpub, 1)[0]
+    assert address.startswith("1")
+
+
+def test_derive_zec_transparent_address_prefix(address_deriver: AddressDeriver) -> None:
+    zpub = (
+        "zpub6rFR7y4Q2AijBEqTUquhVz398htDFrtymD9xYYfG1m4wAcvPhXNfE3EfH1r1"
+        "ADqtfSdVCToUG868RvUUkgDKf31mGDtKsAYz2oz2AGutZYs"
+    )
+    address = address_deriver.derive(ChainSymbol.ZEC, zpub, 1)[0]
+    assert address.startswith("t1")
+
+
+def test_derive_blockscout_evm_addresses(address_deriver: AddressDeriver) -> None:
+    zpub = (
+        "zpub6rFR7y4Q2AijBEqTUquhVz398htDFrtymD9xYYfG1m4wAcvPhXNfE3EfH1r1"
+        "ADqtfSdVCToUG868RvUUkgDKf31mGDtKsAYz2oz2AGutZYs"
+    )
+    for chain in (ChainSymbol.ETC, ChainSymbol.POL, ChainSymbol.BSC, ChainSymbol.ARB):
+        address = address_deriver.derive(chain, zpub, 1)[0]
+        assert address.startswith("0x")
+
+
 def test_ensure_positive_count_rejects_zero() -> None:
     with pytest.raises(ConfigurationError):
         ensure_positive_count(0)

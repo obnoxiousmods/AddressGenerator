@@ -9,15 +9,37 @@ from typing import cast
 from embit import bip32, script
 from eth_hash.auto import keccak
 
-from address_generator.constants import BTC, DOGE, ETH, LTC, SECP256K1_P
+from address_generator.constants import (
+    ARB,
+    BASE,
+    BCH,
+    BSC,
+    BTC,
+    DOGE,
+    ETC,
+    ETH,
+    LTC,
+    OP,
+    POL,
+    SECP256K1_P,
+    ZEC,
+)
 from address_generator.exceptions import ConfigurationError
 from address_generator.models import ChainSymbol, DerivedAddress
 
 CHAIN_MAP = {
     ChainSymbol.BTC: BTC,
+    ChainSymbol.BCH: BCH,
     ChainSymbol.LTC: LTC,
     ChainSymbol.DOGE: DOGE,
+    ChainSymbol.ZEC: ZEC,
     ChainSymbol.ETH: ETH,
+    ChainSymbol.ETC: ETC,
+    ChainSymbol.POL: POL,
+    ChainSymbol.BSC: BSC,
+    ChainSymbol.ARB: ARB,
+    ChainSymbol.BASE: BASE,
+    ChainSymbol.OP: OP,
 }
 
 
@@ -89,7 +111,15 @@ class AddressDeriver:
         normalized_key = self.normalizer.normalize(public_key.strip())
         hdkey = bip32.HDKey.from_string(normalized_key)
 
-        if chain is ChainSymbol.ETH:
+        if chain in {
+            ChainSymbol.ETH,
+            ChainSymbol.ETC,
+            ChainSymbol.POL,
+            ChainSymbol.BSC,
+            ChainSymbol.ARB,
+            ChainSymbol.BASE,
+            ChainSymbol.OP,
+        }:
             return [
                 DerivedAddress(
                     branch=branch,

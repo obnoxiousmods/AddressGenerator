@@ -14,7 +14,7 @@ intentionally refuses recovery seeds and passphrases.
 ## Features
 
 - Reusable Python API plus `scan`, `derive`, `providers`, `validate`, and `tui` commands
-- `BTC`, `LTC`, `DOGE`, and `ETH` support
+- `BTC`, `BCH`, `LTC`, `DOGE`, `ZEC`, `ETH`, `ETC`, `POL`, `BSC`, `ARB`, `BASE`, and `OP` support
 - ERC-20 holdings discovery on scanned Ethereum addresses
 - `xpub`-style derivation or pasted public address lists
 - `stdin`, interactive prompts, CLI flags, and TOML config support
@@ -89,15 +89,23 @@ index=0 | address=bc1q... | txs=4 | balance=0.01500000 BTC | usd=$905.70
 ## Providers
 
 The default provider catalog is intentionally mixed because there is no single
-free, official, multichain backend that cleanly covers `BTC`, `LTC`, `DOGE`,
-and `ETH`.
+free, official, multichain backend that cleanly covers all currently
+implemented chains.
 
 | Provider | Chains | Signup | Free | Notes |
 | --- | --- | --- | --- | --- |
 | `blockstream-public` | `BTC` | No | Yes | Good Bitcoin public explorer for prototyping. Official docs do not publish a simple numeric public rate limit. |
+| `bch-explorer-public` | `BCH` | No | Yes | Public BCH explorer with Esplora-like address endpoints. |
 | `litecoinspace-public` | `LTC` | No | Yes | Litecoin Foundation-run public explorer API. Official docs do not publish a numeric REST rate limit. |
 | `sochain` | `BTC`, `LTC`, `DOGE` | Yes | Keyed | Used here for real `DOGE` mainnet support. Requires `SOCHAIN_API_KEY`. |
+| `zcashinfo-public` | `ZEC` | No | Yes | Transparent-address API. Free tier is documented at `10 req/s` with burst `30`. |
 | `ethplorer` | `ETH` | No | Yes | `freekey` supports `5 req/s`, `50/min`, `200/hour`, `2000/day`, `3000/week`. |
+| `etc-blockscout` | `ETC` | No | Yes | Public Blockscout instance for Ethereum Classic. |
+| `polygon-blockscout` | `POL` | No | Yes | Public Blockscout instance for Polygon PoS. |
+| `arbitrum-blockscout` | `ARB` | No | Yes | Public Blockscout instance for Arbitrum One. |
+| `base-blockscout` | `BASE` | No | Yes | Public Blockscout instance for Base. |
+| `optimism-blockscout` | `OP` | No | Yes | Public Blockscout instance for Optimism. |
+| `bscscan` | `BSC` | Yes | Keyed | Requires `BSCSCAN_API_KEY`. |
 
 Use `uv run address-generator providers` to inspect the current provider metadata
 from the installed package.

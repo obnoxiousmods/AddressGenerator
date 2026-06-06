@@ -16,30 +16,52 @@ from typing import Any, Protocol, cast
 import requests
 
 from address_generator.api_types import (
+    BlockscoutAddressResponseDict,
+    BlockscoutCountersResponseDict,
     CoinGeckoPriceDict,
     EthAddressResponseDict,
+    EtherscanStatusResponseDict,
     SoChainResponseDict,
     UtxoAddressResponseDict,
+    ZcashInfoAddressResponseDict,
+    ZcashInfoTransactionsResponseDict,
 )
 from address_generator.constants import (
+    ARB,
+    BASE,
+    BCH,
+    BSC,
+    BSCSCAN_URL,
     BTC,
     COINGECKO_URL,
     DEFAULT_PROVIDER_ORDER,
+    ETC,
     ETHPLORER_URL,
     LTC,
+    OP,
+    POL,
     PROVIDER_METADATA,
     SATOSHI,
     SOCHAIN_URL,
     WEI,
+    ZEC,
 )
 from address_generator.exceptions import ExplorerApiError
 from address_generator.models import ChainSymbol, ProviderMetadata, ReportRow
 
 COIN_IDS = {
     ChainSymbol.BTC: BTC.coin_gecko_id,
+    ChainSymbol.BCH: BCH.coin_gecko_id,
     ChainSymbol.LTC: LTC.coin_gecko_id,
     ChainSymbol.DOGE: "dogecoin",
+    ChainSymbol.ZEC: ZEC.coin_gecko_id,
     ChainSymbol.ETH: "ethereum",
+    ChainSymbol.ETC: ETC.coin_gecko_id,
+    ChainSymbol.POL: POL.coin_gecko_id,
+    ChainSymbol.BSC: BSC.coin_gecko_id,
+    ChainSymbol.ARB: ARB.coin_gecko_id,
+    ChainSymbol.BASE: BASE.coin_gecko_id,
+    ChainSymbol.OP: OP.coin_gecko_id,
 }
 
 
@@ -363,6 +385,166 @@ class EthplorerAddressProvider:
                 note = f"{note} (${usd.quantize(Decimal('0.01'))})"
             rendered.append(note)
         return rendered
+
+
+@dataclass
+class BlockscoutAddressProvider:
+    """Blockscout-backed provider for EVM chains with public explorers."""
+
+    provider_id: str
+    api_base: str
+    supported_chains: tuple[ChainSymbol, ...]
+    http_client: SupportsGetJson
+    native_decimals: int = 18
+
+    def supports_chain(self, chain: ChainSymbol) -> bool:
+        return chain in self.supported_chains
+
+    def scan_address(
+        self,
+        chain: ChainSymbol,
+        index: int | str,
+        address: str,
+        usd_price: Decimal | None,
+    ) -> ReportRow:
+        payload = self.http_client.get_json(f"{self.api_base}/addresses/{address}")
+        counters_payload = self.http_client.get_json(
+            f"{self.api_base}/addresses/{address}/counters"
+        )
+        if not isinstance(payload, dict) or not isinstance(counters_payload, dict):
+            raise ExplorerApiError(f"Unexpected Blockscout response for {chain.value}:{address}")
+
+        response = cast(BlockscoutAddressResponseDict, payload)
+        counters = cast(BlockscoutCountersResponseDict, counters_payload)
+        raw_balance = Decimal(str(response.get("coin_balance", "0")))
+        native_balance = raw_balance / (Decimal(10) ** self.native_decimals)
+        rate = response.get("exchange_rate")
+        if rate is not None:
+            balance_usd = native_balance * Decimal(str(rate))
+        elif usd_price is not None:
+            balance_usd = native_balance * usd_price
+        else:
+            balance_usd = None
+        return ReportRow(
+            index=index,
+            address=address,
+            tx_count=int(counters.get("transactions_count", "0")),
+            balance_native=native_balance,
+            balance_usd=balance_usd,
+            provider_id=self.provider_id,
+        )
+
+
+@dataclass
+class ZcashInfoAddressProvider:
+    """Zcash transparent-address provider using zcashinfo."""
+
+    http_client: SupportsGetJson
+    api_base: str = "https://api.zcashinfo.com/api/v1"
+    provider_id: str = "zcashinfo-public"
+
+    def supports_chain(self, chain: ChainSymbol) -> bool:
+        return chain is ChainSymbol.ZEC
+
+    def scan_address(
+        self,
+        chain: ChainSymbol,
+        index: int | str,
+        address: str,
+        usd_price: Decimal | None,
+    ) -> ReportRow:
+        del chain
+        payload = self.http_client.get_json(f"{self.api_base}/addresses/{address}")
+        txs_payload = self.http_client.get_json(f"{self.api_base}/addresses/{address}/txs")
+        if not isinstance(payload, dict) or not isinstance(txs_payload, dict):
+            raise ExplorerApiError(f"Unexpected zcashinfo response for ZEC:{address}")
+
+        response = cast(ZcashInfoAddressResponseDict, payload)
+        txs = cast(ZcashInfoTransactionsResponseDict, txs_payload)
+        balance = Decimal(response["balance_zec"])
+        balance_usd = balance * usd_price if usd_price is not None else None
+        return ReportRow(
+            index=index,
+            address=address,
+            tx_count=txs["total_count"],
+            balance_native=balance,
+            balance_usd=balance_usd,
+            provider_id=self.provider_id,
+        )
+
+
+@dataclass
+class BscScanAddressProvider:
+    """BscScan-backed provider for keyed BNB Smart Chain address lookups."""
+
+    http_client: SupportsGetJson
+    api_url: str = BSCSCAN_URL
+    api_key: str | None = None
+    provider_id: str = "bscscan"
+
+    def supports_chain(self, chain: ChainSymbol) -> bool:
+        return chain is ChainSymbol.BSC
+
+    def scan_address(
+        self,
+        chain: ChainSymbol,
+        index: int | str,
+        address: str,
+        usd_price: Decimal | None,
+    ) -> ReportRow:
+        del chain
+        api_key = self.api_key or os.getenv("BSCSCAN_API_KEY")
+        if not api_key:
+            raise ExplorerApiError(
+                "BscScan requires BSCSCAN_API_KEY for keyed requests. "
+                "Create one at https://docs.bscscan.com."
+            )
+
+        balance_payload = cast(
+            EtherscanStatusResponseDict,
+            self.http_client.get_json(
+                self.api_url,
+                params={
+                    "module": "account",
+                    "action": "balance",
+                    "address": address,
+                    "tag": "latest",
+                    "apikey": api_key,
+                },
+            ),
+        )
+        txlist_payload = cast(
+            EtherscanStatusResponseDict,
+            self.http_client.get_json(
+                self.api_url,
+                params={
+                    "module": "account",
+                    "action": "txlist",
+                    "address": address,
+                    "startblock": "0",
+                    "endblock": "99999999",
+                    "page": "1",
+                    "offset": "10000",
+                    "sort": "asc",
+                    "apikey": api_key,
+                },
+            ),
+        )
+        balance_result = balance_payload.get("result")
+        tx_result = txlist_payload.get("result")
+        if not isinstance(balance_result, str) or not isinstance(tx_result, list):
+            raise ExplorerApiError(f"Unexpected BscScan response for BSC:{address}")
+
+        balance = Decimal(balance_result) / WEI
+        balance_usd = balance * usd_price if usd_price is not None else None
+        return ReportRow(
+            index=index,
+            address=address,
+            tx_count=len(tx_result),
+            balance_native=balance,
+            balance_usd=balance_usd,
+            provider_id=self.provider_id,
+        )
 
 
 @dataclass

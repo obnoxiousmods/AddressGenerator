@@ -5,10 +5,13 @@ from decimal import Decimal
 from conftest import FakeHttpClient
 
 from address_generator.clients import (
+    BlockscoutAddressProvider,
+    BscScanAddressProvider,
     EsploraAddressProvider,
     EthplorerAddressProvider,
     PriceClient,
     SoChainAddressProvider,
+    ZcashInfoAddressProvider,
 )
 from address_generator.models import ChainSymbol
 
@@ -46,3 +49,44 @@ def test_sochain_provider_builds_doge_row(fake_http_client: FakeHttpClient) -> N
     row = client.scan_address(ChainSymbol.DOGE, "0/0", "Dabc", Decimal("0.1"))
     assert row.tx_count == 4
     assert row.balance_native == Decimal("25.5")
+
+
+def test_bch_explorer_provider_builds_row(fake_http_client: FakeHttpClient) -> None:
+    client = EsploraAddressProvider(
+        provider_id="bch-explorer-public",
+        api_base="https://bchexplorer.cash/api",
+        supported_chains=(ChainSymbol.BCH,),
+        http_client=fake_http_client,
+    )
+    row = client.scan_address(ChainSymbol.BCH, "0/0", "1BCHexample", Decimal("450"))
+    assert row.tx_count == 2
+    assert row.balance_native == Decimal("5")
+
+
+def test_zcashinfo_provider_builds_row(fake_http_client: FakeHttpClient) -> None:
+    client = ZcashInfoAddressProvider(http_client=fake_http_client)
+    row = client.scan_address(ChainSymbol.ZEC, "0/0", "t1abc", Decimal("30"))
+    assert row.tx_count == 3
+    assert row.balance_native == Decimal("1.23000000")
+    assert row.balance_usd == Decimal("36.90000000")
+
+
+def test_blockscout_provider_builds_row(fake_http_client: FakeHttpClient) -> None:
+    client = BlockscoutAddressProvider(
+        provider_id="etc-blockscout",
+        api_base="https://etc.blockscout.com/api/v2",
+        supported_chains=(ChainSymbol.ETC,),
+        http_client=fake_http_client,
+    )
+    row = client.scan_address(ChainSymbol.ETC, "0/0", "0xetc", None)
+    assert row.tx_count == 7
+    assert row.balance_native == Decimal("2")
+    assert row.balance_usd == Decimal("50.0")
+
+
+def test_bscscan_provider_builds_row(fake_http_client: FakeHttpClient) -> None:
+    client = BscScanAddressProvider(http_client=fake_http_client, api_key="bsc-key")
+    row = client.scan_address(ChainSymbol.BSC, "0/0", "0xbsc", Decimal("600"))
+    assert row.tx_count == 2
+    assert row.balance_native == Decimal("3")
+    assert row.balance_usd == Decimal("1800")
